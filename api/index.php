@@ -387,8 +387,8 @@ function placeOrder(): void {
     $eNum      = trim($body['ewallet_num'] ?? '');
 
     if (empty($cartIds))  jsonResponse(['error' => 'No items selected.'], 422);
-    if (!$barangay)       jsonResponse(['error' => 'Please select a province.'], 422);
-    if (!$address)        jsonResponse(['error' => 'Please enter your address.'], 422);
+    if (!$address)        jsonResponse(['error' => 'Please enter your delivery address.'], 422);
+    if (strlen($address) < 5) jsonResponse(['error' => 'Please enter a complete delivery address.'], 422);
     if (!$payment)        jsonResponse(['error' => 'Please select a payment method.'], 422);
 
     // Fetch selected cart items with product info
@@ -421,7 +421,8 @@ function placeOrder(): void {
         'INSERT INTO orders (user_id, total_amount, delivery_addr, payment_method, ewallet_num)
          VALUES (?, ?, ?, ?, ?) RETURNING id'
     );
-    $stmt->execute([$user['id'], $total, "$address, $barangay", $payment, $eNum ?: null]);
+    $fullAddr = $barangay ? "$address, $barangay" : $address;
+    $stmt->execute([$user['id'], $total, $fullAddr, $payment, $eNum ?: null]);
     $orderId = (int)$stmt->fetch()['id'];
 
     $ins = $db->prepare('INSERT INTO order_items (order_id, product_id, name, price) VALUES (?,?,?,?)');
@@ -455,8 +456,8 @@ function directPlaceOrder(): void {
     $eNum      = trim($body['ewallet_num']   ?? '');
 
     if (!$productId) jsonResponse(['error' => 'Invalid product.'], 422);
-    if (!$barangay)  jsonResponse(['error' => 'Please select a province.'], 422);
-    if (!$address)   jsonResponse(['error' => 'Please enter your address.'], 422);
+    if (!$address)   jsonResponse(['error' => 'Please enter your delivery address.'], 422);
+    if (strlen($address) < 5) jsonResponse(['error' => 'Please enter a complete delivery address.'], 422);
     if (!$payment)   jsonResponse(['error' => 'Please select a payment method.'], 422);
 
     $stmt = $db->prepare('SELECT * FROM products WHERE id = ?');
@@ -474,7 +475,8 @@ function directPlaceOrder(): void {
         'INSERT INTO orders (user_id, total_amount, delivery_addr, payment_method, ewallet_num)
          VALUES (?, ?, ?, ?, ?) RETURNING id'
     );
-    $stmt->execute([$user['id'], $product['price'], "$address, $barangay", $payment, $eNum ?: null]);
+    $fullAddr = $barangay ? "$address, $barangay" : $address;
+    $stmt->execute([$user['id'], $product['price'], $fullAddr, $payment, $eNum ?: null]);
     $orderId = (int)$stmt->fetch()['id'];
 
     $db->prepare('INSERT INTO order_items (order_id, product_id, name, price) VALUES (?,?,?,?)')

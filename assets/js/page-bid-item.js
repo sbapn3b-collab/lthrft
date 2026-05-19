@@ -45,10 +45,11 @@ function renderDetail(a) {
     document.getElementById('detail-description').textContent = a.description || 'No description provided.';
 
     // ── Images ──
+    const PLACEHOLDER = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'%3E%3Crect width='400' height='500' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%2394a3b8'%3ENo Image%3C/text%3E%3C/svg%3E";
     const imgs = a.images || [];
     _imgIndex  = Math.max(0, Math.min(_imgIndex, imgs.length - 1));
     const mainImg  = document.getElementById('main-img');
-    mainImg.src    = imgs[_imgIndex] || '';
+    mainImg.src    = fixImgUrl(imgs[_imgIndex] || '') || PLACEHOLDER;
     mainImg.alt    = a.name;
 
     document.getElementById('img-prev').classList.toggle('hidden', imgs.length < 2);
@@ -276,7 +277,8 @@ function startTimer(target) {
 function setImg(i) {
     const imgs = _auction?.images || [];
     _imgIndex  = Math.max(0, Math.min(i, imgs.length - 1));
-    document.getElementById('main-img').src = fixImgUrl(imgs[_imgIndex] || '');
+    const PLACEHOLDER_SRC = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='500' viewBox='0 0 400 500'%3E%3Crect width='400' height='500' fill='%23f1f5f9'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='16' fill='%2394a3b8'%3ENo Image%3C/text%3E%3C/svg%3E";
+    document.getElementById('main-img').src = fixImgUrl(imgs[_imgIndex] || '') || PLACEHOLDER_SRC;
     if (imgs.length > 1)
         document.getElementById('img-counter').textContent = `${_imgIndex + 1} / ${imgs.length}`;
     document.querySelectorAll('#thumbnails button').forEach((b, idx) => {
