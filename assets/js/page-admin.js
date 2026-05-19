@@ -2,7 +2,7 @@
 // Shared across all admin/*.html pages.
 // Guards against non-admin access, handles sidebar active state.
 
-document.addEventListener('DOMContentLoaded', () => setTimeout(initAdmin, 500));
+document.addEventListener('pageReady', initAdmin);
 
 async function initAdmin() {
     // Guard: must be logged in as admin
