@@ -169,8 +169,7 @@ const DirectOrder = {
         document.getElementById('on-item-price').innerText = `₱${product.price}`;
 
         // Reset fields
-        document.getElementById('on-province').value    = '';
-        document.getElementById('on-address').value     = localStorage.getItem('luckyth.defaultAddress') || '';
+        document.getElementById('on-address-full').value = localStorage.getItem('luckyth.defaultAddress') || '';
         document.getElementById('on-ewallet-num').value = '';
         document.getElementById('on-ewallet-input').classList.add('hidden');
         document.querySelectorAll('.on-payment-card').forEach(c => {
