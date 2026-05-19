@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auctions | LuckyThrift Admin</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>tailwind.config = { theme: { extend: { colors: { navy:'#003E7E', orange:'#F59231' } } } }</script>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-hidden" data-admin-page="auctions">
+
+<div id="toast-placeholder"></div>
+
+<div class="flex h-screen">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-black text-navy">Auction Management</h1>
+                <p class="text-sm text-slate-400 font-bold mt-1">Create drafts, then publish when ready.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="openAuctionForm()" class="flex items-center gap-2 bg-orange hover:bg-orange/90 text-white px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm">
+                    <i data-lucide="plus" class="w-4 h-4"></i> New Auction
+                </button>
+                <button id="refresh-btn" onclick="refreshAuctions()" title="Refresh" class="flex items-center gap-2 bg-white border-2 border-slate-200 hover:border-navy text-navy px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm">
+                    <i data-lucide="refresh-cw" id="refresh-icon" class="w-4 h-4"></i> Refresh
+                </button>
+            </div>
+        </div>
+
+        <!-- Status tabs -->
+        <div class="flex gap-2 mb-6 border-b-2 border-slate-100">
+            <button data-tab="draft"     onclick="switchTab('draft')"     class="auction-tab px-4 py-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-navy transition-colors">Drafts <span class="tab-count ml-1 text-xs bg-slate-100 px-2 py-0.5 rounded-full">0</span></button>
+            <button data-tab="scheduled" onclick="switchTab('scheduled')" class="auction-tab px-4 py-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-navy transition-colors">Scheduled <span class="tab-count ml-1 text-xs bg-slate-100 px-2 py-0.5 rounded-full">0</span></button>
+            <button data-tab="live"      onclick="switchTab('live')"      class="auction-tab px-4 py-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-navy transition-colors">Live <span class="tab-count ml-1 text-xs bg-slate-100 px-2 py-0.5 rounded-full">0</span></button>
+            <button data-tab="ended"     onclick="switchTab('ended')"     class="auction-tab px-4 py-3 font-bold text-sm border-b-2 border-transparent text-slate-400 hover:text-navy transition-colors">Ended <span class="tab-count ml-1 text-xs bg-slate-100 px-2 py-0.5 rounded-full">0</span></button>
+        </div>
+
+        <div class="bg-white border-2 border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <tr>
+                        <th class="px-6 py-4">Item</th>
+                        <th class="px-6 py-4">Starting</th>
+                        <th class="px-6 py-4">Current Bid</th>
+                        <th class="px-6 py-4">Window</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="auction-table" class="divide-y divide-slate-100">
+                    <tr><td colspan="5" class="px-6 py-10 text-center text-slate-300 font-bold animate-pulse">Loading auctions…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- Auction create/edit modal -->
+<div id="auction-modal" class="hidden fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm items-center justify-center p-4" onclick="if(event.target===this) closeAuctionForm()">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div class="p-6 border-b-2 border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+            <h2 id="form-title" class="text-2xl font-black text-navy">New Auction</h2>
+            <button onclick="closeAuctionForm()" class="text-slate-400 hover:text-navy"><i data-lucide="x" class="w-6 h-6"></i></button>
+        </div>
+        <form id="auction-form" class="p-6 space-y-4" onsubmit="saveAuction(event)">
+            <input type="hidden" id="f-id" value="">
+
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Item Name *</label>
+                <input id="f-name" type="text" required class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold focus:border-navy focus:outline-none">
+            </div>
+
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Description</label>
+                <textarea id="f-description" rows="3" class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-medium focus:border-navy focus:outline-none"></textarea>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Category</label>
+                    <select id="f-category" class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold focus:border-navy focus:outline-none">
+                        <option>Headwear</option><option>Tops</option><option>Outerwear</option>
+                        <option>Pants</option><option>Shorts</option><option>Dresses & Skirts</option>
+                        <option>Footwear</option><option>Bags & Accessories</option>
+                        <option selected>Other</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Starting Price (₱) *</label>
+                    <input id="f-start-price" type="number" min="1" step="0.01" required class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold focus:border-navy focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Bid Increment (₱) *</label>
+                    <input id="f-increment" type="number" min="1" step="0.01" value="20" required class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold focus:border-navy focus:outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Bidding Starts</label>
+                    <input id="f-start-time" type="datetime-local" class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold focus:border-navy focus:outline-none">
+                </div>
+                <div>
+                    <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Bidding Ends</label>
+                    <input id="f-end-time" type="datetime-local" class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-bold focus:border-navy focus:outline-none">
+                </div>
+            </div>
+            <p class="text-xs text-slate-400 font-medium">Times are required to publish. Drafts can be saved without them.</p>
+
+            <div>
+                <label class="text-xs font-black text-slate-400 uppercase tracking-widest">Image URLs (one per line)</label>
+                <textarea id="f-images" rows="3" placeholder="https://...&#10;https://..." class="mt-1 w-full px-4 py-3 border-2 border-slate-200 rounded-xl font-mono text-sm focus:border-navy focus:outline-none"></textarea>
+                <p class="text-xs text-slate-400 font-medium mt-1">At least one image is required to publish.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-4 border-t-2 border-slate-100">
+                <button type="button" onclick="closeAuctionForm()" class="px-5 py-3 rounded-xl font-bold text-sm text-slate-500 hover:bg-slate-100 transition-colors">Cancel</button>
+                <button type="submit" class="px-5 py-3 rounded-xl font-bold text-sm bg-navy hover:bg-navy/90 text-white transition-colors shadow-sm">Save Draft</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script src="../assets/js/page-admin.js"></script>
+<script>
+let allAuctions = [];
+let currentTab  = 'draft';
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadInclude('sidebar-placeholder', '/includes/admin-sidebar.html');
+    await loadInclude('toast-placeholder',   '/includes/toast.html');
+    lucide.createIcons();
+    document.addEventListener('pageReady', async () => {
+        if (!Nav.user || Nav.user.role !== 'admin') { window.location.href = '/index.html'; return; }
+        document.querySelectorAll('.admin-nav-btn[data-page]').forEach(a => {
+            a.classList.toggle('active', a.dataset.page === 'auctions');
+        });
+        await loadAuctions();
+    });
+});
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.auction-tab').forEach(b => {
+        const active = b.dataset.tab === tab;
+        b.classList.toggle('text-navy', active);
+        b.classList.toggle('border-navy', active);
+        b.classList.toggle('text-slate-400', !active);
+        b.classList.toggle('border-transparent', !active);
+    });
+    renderTable();
+}
+
+async function loadAuctions() {
+    try {
+        const data = await API.adminGetAuctions();
+        allAuctions = data.auctions || [];
+        updateCounts();
+        renderTable();
+    } catch(e) {
+        document.getElementById('auction-table').innerHTML =
+            `<tr><td colspan="5" class="px-6 py-10 text-center text-red-400 font-bold">Could not load auctions.</td></tr>`;
+    }
+}
+
+function updateCounts() {
+    const counts = { draft:0, scheduled:0, live:0, ended:0 };
+    allAuctions.forEach(a => { if (counts[a.status] !== undefined) counts[a.status]++; });
+    document.querySelectorAll('.auction-tab').forEach(b => {
+        const span = b.querySelector('.tab-count');
+        if (span) span.textContent = counts[b.dataset.tab] ?? 0;
+    });
+}
+
+function fmtTime(t) {
+    if (!t) return '—';
+    const d = new Date(t.replace(' ', 'T') + 'Z');
+    return d.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+}
+
+function renderTable() {
+    const rows = allAuctions.filter(a => a.status === currentTab);
+    const tbody = document.getElementById('auction-table');
+    if (rows.length === 0) {
+        const empty = {
+            draft: 'No drafts yet. Click "New Auction" to create one.',
+            scheduled: 'No scheduled auctions. Publish a draft to schedule it.',
+            live: 'No auctions are live right now.',
+            ended: 'No ended auctions yet.',
+        }[currentTab];
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-10 text-center text-slate-300 font-bold">${empty}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = rows.map(a => {
+        const img     = fixImgUrl(a.images?.[0] || '');
+        const current = a.current_bid !== null ? `₱${a.current_bid}` : '<span class="text-slate-300">No bids</span>';
+        const timeWin = `<div class="text-xs"><div><span class="text-slate-400">Starts:</span> ${fmtTime(a.start_time)}</div><div><span class="text-slate-400">Ends:</span> ${fmtTime(a.end_time)}</div></div>`;
+        const winnerCol = a.status === 'ended'
+            ? (a.winner_username
+                ? `<div class="text-xs"><span class="inline-block bg-green-100 text-green-700 font-bold px-2 py-0.5 rounded-full">🏆 ${a.winner_username}</span>${a.winning_order_id ? `<div class="mt-1 text-slate-400">Order #${a.winning_order_id}</div>` : ''}</div>`
+                : `<span class="text-xs text-slate-300 font-bold">No winner</span>`)
+            : timeWin;
+        return `
+            <tr class="hover:bg-slate-50">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-4">
+                        <img src="${img}" class="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-100">
+                        <div>
+                            <p class="font-bold text-navy">${a.name || '<span class="text-slate-300 italic">Untitled</span>'}</p>
+                            <p class="text-xs text-slate-400">${a.category}</p>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-6 py-4 font-black text-navy">₱${a.starting_price}</td>
+                <td class="px-6 py-4 font-bold text-navy">${current}</td>
+                <td class="px-6 py-4 text-slate-600 font-medium">${winnerCol}</td>
+                <td class="px-6 py-4 text-right">
+                    <div class="flex justify-end gap-2 flex-wrap">
+                        ${actionButtons(a)}
+                    </div>
+                </td>
+            </tr>`;
+    }).join('');
+    lucide.createIcons();
+}
+
+function actionButtons(a) {
+    const buttons = [];
+    if (a.status === 'draft') {
+        buttons.push(`<button onclick="editAuction(${a.id})" class="text-xs font-bold bg-slate-100 hover:bg-navy hover:text-white px-3 py-2 rounded-xl transition-colors">Edit</button>`);
+        buttons.push(`<button onclick="publishAuction(${a.id})" class="text-xs font-bold bg-orange/10 text-orange hover:bg-orange hover:text-white px-3 py-2 rounded-xl transition-colors">Publish</button>`);
+        buttons.push(`<button onclick="deleteAuction(${a.id})" class="text-xs font-bold bg-slate-100 hover:bg-red-500 hover:text-white px-3 py-2 rounded-xl transition-colors">Delete</button>`);
+    } else if (a.status === 'scheduled') {
+        buttons.push(`<button onclick="editAuction(${a.id})" class="text-xs font-bold bg-slate-100 hover:bg-navy hover:text-white px-3 py-2 rounded-xl transition-colors">Edit</button>`);
+        buttons.push(`<button onclick="unpublishAuction(${a.id})" class="text-xs font-bold bg-slate-100 hover:bg-slate-500 hover:text-white px-3 py-2 rounded-xl transition-colors">Unpublish</button>`);
+    } else if (a.status === 'live') {
+        buttons.push(`<span class="text-xs font-black text-green-600 bg-green-50 px-3 py-2 rounded-xl">● LIVE</span>`);
+    } else if (a.status === 'ended') {
+        buttons.push(`<span class="text-xs font-black text-slate-500 bg-slate-100 px-3 py-2 rounded-xl">Ended</span>`);
+    }
+    return buttons.join('');
+}
+
+function openAuctionForm() {
+    document.getElementById('form-title').textContent = 'New Auction';
+    document.getElementById('auction-form').reset();
+    document.getElementById('f-id').value = '';
+    document.getElementById('f-increment').value = 20;
+    document.getElementById('f-category').value = 'Other';
+    document.getElementById('auction-modal').classList.remove('hidden');
+    document.getElementById('auction-modal').classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeAuctionForm() {
+    document.getElementById('auction-modal').classList.add('hidden');
+    document.getElementById('auction-modal').classList.remove('flex');
+    document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !document.getElementById('auction-modal').classList.contains('hidden')) {
+        closeAuctionForm();
+    }
+});
+
+function editAuction(id) {
+    const a = allAuctions.find(x => x.id === id);
+    if (!a) return;
+    document.getElementById('form-title').textContent = `Edit: ${a.name || 'Untitled'}`;
+    document.getElementById('f-id').value           = a.id;
+    document.getElementById('f-name').value         = a.name || '';
+    document.getElementById('f-description').value  = a.description || '';
+    document.getElementById('f-category').value     = a.category || 'Other';
+    document.getElementById('f-start-price').value  = a.starting_price || '';
+    document.getElementById('f-increment').value    = a.bid_increment || 20;
+    document.getElementById('f-start-time').value   = toDatetimeLocal(a.start_time);
+    document.getElementById('f-end-time').value     = toDatetimeLocal(a.end_time);
+    document.getElementById('f-images').value       = (a.images || []).join('\n');
+    document.getElementById('auction-modal').classList.remove('hidden');
+    document.getElementById('auction-modal').classList.add('flex');
+    document.body.style.overflow = 'hidden';
+}
+
+function toDatetimeLocal(t) {
+    if (!t) return '';
+    const d = new Date(t.replace(' ', 'T') + 'Z');
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localToUTC(val) {
+    if (!val) return null;
+    return new Date(val).toISOString().replace('T', ' ').slice(0, 19);
+}
+
+async function saveAuction(e) {
+    e.preventDefault();
+    const id = document.getElementById('f-id').value;
+    const payload = {
+        name:           document.getElementById('f-name').value.trim(),
+        description:    document.getElementById('f-description').value.trim(),
+        category:       document.getElementById('f-category').value,
+        starting_price: parseFloat(document.getElementById('f-start-price').value) || 0,
+        bid_increment:  parseFloat(document.getElementById('f-increment').value)   || 0,
+        start_time:     localToUTC(document.getElementById('f-start-time').value),
+        end_time:       localToUTC(document.getElementById('f-end-time').value),
+        images:         document.getElementById('f-images').value.split('\n').map(s => s.trim()).filter(Boolean),
+    };
+    try {
+        if (id) await API.adminUpdateAuction(parseInt(id), payload);
+        else    await API.adminCreateAuction(payload);
+        showToast(id ? 'Auction updated.' : 'Draft created.', 'success');
+        closeAuctionForm();
+        await loadAuctions();
+    } catch(err) {
+        showToast(err.message, 'error');
+    }
+}
+
+async function publishAuction(id) {
+    if (!confirm('Publish this auction? Once published, it appears on the public Bids page.')) return;
+    try {
+        const r = await API.adminPublishAuction(id);
+        showToast(`Published. Status: ${r.status}.`, 'success');
+        await loadAuctions();
+        switchTab(r.status);
+    } catch(err) { showToast(err.message, 'error'); }
+}
+
+async function unpublishAuction(id) {
+    if (!confirm('Move this back to drafts?')) return;
+    try {
+        await API.adminUnpublishAuction(id);
+        showToast('Moved to drafts.', 'success');
+        await loadAuctions();
+        switchTab('draft');
+    } catch(err) { showToast(err.message, 'error'); }
+}
+
+async function deleteAuction(id) {
+    if (!confirm('Permanently delete this draft?')) return;
+    try {
+        await API.adminDeleteAuction(id);
+        showToast('Draft deleted.', 'success');
+        await loadAuctions();
+    } catch(err) { showToast(err.message, 'error'); }
+}
+
+async function refreshAuctions() {
+    const icon = document.getElementById('refresh-icon');
+    const btn  = document.getElementById('refresh-btn');
+    btn.disabled = true;
+    icon.style.animation = 'spin 0.8s linear infinite';
+    await loadAuctions();
+    icon.style.animation = '';
+    btn.disabled = false;
+}
+</script>
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</body>
+</html>

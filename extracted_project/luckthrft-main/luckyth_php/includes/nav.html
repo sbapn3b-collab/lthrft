@@ -1,0 +1,29 @@
+<nav class="glass-nav fixed top-0 w-full z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-20">
+            <a href="/index.html" class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-navy rounded-lg flex items-center justify-center shadow-lg">
+                    <i data-lucide="shopping-bag" class="text-white w-6 h-6"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-2xl font-extrabold tracking-tighter text-navy leading-none">Lucky<span class="text-orange">Thrift</span></span>
+                </div>
+            </a>
+            <div class="hidden md:flex items-center gap-6">
+                <a href="/index.html" class="text-sm font-bold text-navy hover:text-orange nav-link" data-page="home">Home</a>
+                <a href="/shop.html"  class="text-sm font-bold text-navy hover:text-orange nav-link" data-page="shop">Storefront</a>
+                <a href="/bids.html"  class="text-sm font-bold text-navy hover:text-orange nav-link flex items-center gap-1" data-page="bids"><i data-lucide="gavel" class="w-4 h-4"></i>Bids</a>
+                <a href="/cart.html"  class="nav-icon relative" title="My Cart">
+                    <i data-lucide="shopping-cart" class="w-6 h-6"></i>
+                    <span id="cart-badge" class="hidden absolute -top-2 -right-2 bg-orange text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center">0</span>
+                </a>
+                <a href="/profile.html" id="profile-btn" class="hidden nav-icon items-center justify-center" title="My Profile">
+                    <i data-lucide="user-circle" class="w-6 h-6" id="profile-btn-icon"></i>
+                    <img id="profile-btn-avatar" class="hidden w-9 h-9 rounded-full object-cover ring-2 ring-orange" alt="">
+                </a>
+                <button id="auth-btn"   onclick="Nav.openAuth()"  class="bg-navy text-white px-6 py-2.5 rounded-full text-sm font-bold shadow-md hover:bg-slate-800 ml-2">Sign In</button>
+                <button id="logout-btn" onclick="Nav.logout()"    class="hidden border-2 border-navy text-navy px-6 py-2 rounded-full text-sm font-bold hover:bg-slate-100 ml-2">Sign Out</button>
+            </div>
+        </div>
+    </div>
+</nav>

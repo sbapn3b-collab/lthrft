@@ -1,0 +1,23 @@
+<aside class="w-64 bg-navy text-white flex flex-col shadow-2xl z-50 shrink-0">
+    <div class="p-6 border-b border-white/10 flex items-center gap-3">
+        <i data-lucide="shield-check" class="text-orange w-8 h-8"></i>
+        <div>
+            <h2 class="font-black text-lg leading-tight">AdminPanel</h2>
+            <p class="text-[10px] text-slate-400 uppercase tracking-widest">OrderWise Sys</p>
+        </div>
+    </div>
+    <nav class="p-4 flex-1 space-y-1 overflow-y-auto">
+        <a href="/admin/dashboard.html"  data-page="dashboard"  class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard</a>
+        <a href="/admin/inventory.html"  data-page="inventory"  class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all"><i data-lucide="package" class="w-5 h-5"></i> Inventory</a>
+        <a href="/admin/auctions.html"   data-page="auctions"   class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all"><i data-lucide="gavel" class="w-5 h-5"></i> Auctions</a>
+        <a href="/admin/orders.html"     data-page="orders"     class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all"><i data-lucide="clipboard-list" class="w-5 h-5"></i> Fulfillment</a>
+        <a href="/admin/analytics.html"  data-page="analytics"  class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all"><i data-lucide="bar-chart-2" class="w-5 h-5"></i> Analytics</a>
+        <a href="/admin/customers.html"  data-page="customers"  class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all"><i data-lucide="users" class="w-5 h-5"></i> Customers</a>
+        <a href="/admin/messages.html"   data-page="messages"   class="admin-nav-btn flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm text-slate-300 hover:text-white transition-all relative"><i data-lucide="message-circle" class="w-5 h-5"></i> Messages <span id="sidebar-msg-badge" class="hidden ml-auto bg-orange text-white text-[10px] font-black px-2 py-0.5 rounded-full">0</span></a>
+    </nav>
+    <div class="p-6 border-t border-white/10">
+        <button onclick="adminLogout()" class="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-orange text-white py-3 rounded-xl font-bold transition-all">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Exit Admin
+        </button>
+    </div>
+</aside>

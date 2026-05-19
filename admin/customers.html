@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customers | LuckyThrift Admin</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>tailwind.config = { theme: { extend: { colors: { navy:'#003E7E', orange:'#F59231' } } } }</script>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-hidden" data-admin-page="customers">
+
+<div id="toast-placeholder"></div>
+
+<div class="flex h-screen">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-black text-navy">Customer Insights</h1>
+            <button id="refresh-btn" onclick="refreshCustomers()" title="Refresh"
+                class="flex items-center gap-2 bg-white border-2 border-slate-200 hover:border-navy text-navy px-4 py-2 rounded-xl font-bold text-sm transition-colors shadow-sm">
+                <i data-lucide="refresh-cw" id="refresh-icon" class="w-4 h-4"></i> Refresh
+            </button>
+        </div>
+
+        <div class="bg-white border-2 border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <tr>
+                        <th class="px-6 py-4">Username</th>
+                        <th class="px-6 py-4">Total Orders</th>
+                        <th class="px-6 py-4">Total Spent</th>
+                        <th class="px-6 py-4 text-right">Rank</th>
+                    </tr>
+                </thead>
+                <tbody id="customers-table" class="divide-y divide-slate-100">
+                    <tr><td colspan="4" class="px-6 py-10 text-center text-slate-300 font-bold animate-pulse">Loading customers…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script src="../assets/js/page-admin.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadInclude('sidebar-placeholder', '/includes/admin-sidebar.html');
+    await loadInclude('toast-placeholder',   '/includes/toast.html');
+    lucide.createIcons();
+    document.addEventListener('pageReady', async () => {
+        if (!Nav.user || Nav.user.role !== 'admin') { window.location.href = '/index.html'; return; }
+        document.querySelectorAll('.admin-nav-btn[data-page]').forEach(a => {
+            a.classList.toggle('active', a.dataset.page === 'customers');
+        });
+        await loadCustomers();
+    });
+});
+
+async function loadCustomers() {
+    const tbody = document.getElementById('customers-table');
+    try {
+        const data = await API.getCustomers();
+        if (!data.customers.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="px-6 py-10 text-center text-slate-400 font-bold">No customers yet.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = data.customers.map((c, i) => `
+            <tr class="hover:bg-slate-50">
+                <td class="px-6 py-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 bg-navy/10 rounded-full flex items-center justify-center">
+                            <i data-lucide="user" class="w-4 h-4 text-navy"></i>
+                        </div>
+                        <span class="font-bold text-navy">${c.username}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 font-bold">${c.orders}</td>
+                <td class="px-6 py-4 font-black text-navy">₱${Number(c.spent).toLocaleString()}</td>
+                <td class="px-6 py-4 text-right">
+                    ${i === 0 ? '<span class="text-yellow-500 font-black text-sm">🥇 Top Customer</span>' :
+                      i === 1 ? '<span class="text-slate-400 font-black text-sm">🥈 2nd</span>' :
+                      i === 2 ? '<span class="text-orange font-black text-sm">🥉 3rd</span>' :
+                      `<span class="text-slate-300 text-sm font-bold">#${i+1}</span>`}
+                </td>
+            </tr>`).join('');
+        lucide.createIcons();
+    } catch(e) { showToast('Error loading customers.', 'error'); }
+}
+
+async function refreshCustomers() {
+    const icon = document.getElementById('refresh-icon');
+    const btn  = document.getElementById('refresh-btn');
+    btn.disabled = true;
+    icon.style.animation = 'spin 0.8s linear infinite';
+    await loadCustomers();
+    icon.style.animation = '';
+    btn.disabled = false;
+}
+</script>
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | LuckyThrift</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>tailwind.config = { theme: { extend: { colors: { navy:'#003E7E', orange:'#F59231' } } } }</script>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-x-hidden" data-page="profile">
+
+<div id="global-loader" class="fixed inset-0 bg-white z-[999] flex items-center justify-center">
+    <div class="text-center"><div class="loader-spin mx-auto mb-4"></div>
+    <p class="text-navy font-black text-sm uppercase tracking-widest">Loading Profile…</p></div>
+</div>
+
+<div id="nav-placeholder"></div>
+<div id="auth-placeholder"></div>
+<div id="toast-placeholder"></div>
+
+<main class="pt-24 pb-20 max-w-4xl mx-auto px-4" id="profile-content">
+
+    <div class="mb-6 flex items-center justify-between gap-3">
+        <a href="/shop.html" class="inline-flex items-center gap-2 border-2 border-slate-200 hover:border-navy hover:bg-white text-navy px-4 py-2.5 rounded-xl font-bold text-sm transition-colors bg-white shadow-sm">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Storefront
+        </a>
+        <button type="button" id="settings-toggle-btn"
+                class="inline-flex items-center gap-2 border-2 border-slate-200 hover:border-navy hover:bg-white text-navy w-11 h-11 rounded-xl transition-colors bg-white shadow-sm justify-center"
+                title="Settings" aria-label="Settings">
+            <i data-lucide="settings" class="w-5 h-5"></i>
+        </button>
+    </div>
+
+    <!-- HEADER CARD -->
+    <div class="bg-navy rounded-[2.5rem] p-8 sm:p-10 text-white shadow-xl mb-8 flex flex-col sm:flex-row items-center gap-6">
+        <div class="relative shrink-0">
+            <div id="avatar-wrap" class="w-28 h-28 bg-white/10 rounded-full flex items-center justify-center overflow-hidden ring-4 ring-white/20">
+                <i data-lucide="user" class="w-14 h-14 text-white" id="avatar-icon"></i>
+                <img id="avatar-img" class="w-full h-full object-cover hidden" alt="">
+            </div>
+            <button id="avatar-btn" type="button"
+                    class="absolute bottom-0 right-0 bg-orange hover:bg-orange/90 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-lg ring-2 ring-navy"
+                    title="Change photo">
+                <i data-lucide="camera" class="w-4 h-4"></i>
+            </button>
+            <button id="avatar-remove-btn" type="button"
+                    class="hidden absolute top-0 right-0 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full flex items-center justify-center shadow-lg ring-2 ring-navy"
+                    title="Remove photo">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+            <input type="file" id="avatar-input" accept="image/*" class="hidden">
+        </div>
+        <div class="text-center sm:text-left flex-1">
+            <h1 class="text-3xl sm:text-4xl font-black" id="profile-username">—</h1>
+            <p class="text-orange font-bold uppercase tracking-widest text-xs mt-1">Verified Customer</p>
+            <p class="text-white/60 text-sm mt-2" id="profile-fullname-display"></p>
+        </div>
+    </div>
+
+    <!-- PROFILE INFO CARD -->
+    <div class="bg-white rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 shadow-sm mb-8">
+        <div class="flex items-center justify-between mb-6 border-b border-slate-100 pb-4">
+            <h2 class="text-2xl font-black text-navy flex items-center gap-2">
+                <i data-lucide="user-cog" class="w-6 h-6 text-orange"></i> Profile Information
+            </h2>
+            <button id="edit-profile-btn" class="bg-navy text-white hover:bg-orange transition-colors px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2">
+                <i data-lucide="pencil" class="w-4 h-4"></i> Edit
+            </button>
+        </div>
+
+        <!-- VIEW MODE -->
+        <div id="profile-view" class="grid sm:grid-cols-2 gap-x-8 gap-y-5">
+            <div>
+                <p class="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">Full Name</p>
+                <p class="text-navy font-bold" id="view-fullname">—</p>
+            </div>
+            <div>
+                <p class="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">Email</p>
+                <p class="text-navy font-bold break-all" id="view-email">—</p>
+            </div>
+            <div>
+                <p class="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">Phone</p>
+                <p class="text-navy font-bold" id="view-phone">—</p>
+            </div>
+            <div>
+                <p class="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">Username</p>
+                <p class="text-navy font-bold" id="view-username">—</p>
+            </div>
+            <div class="sm:col-span-2">
+                <p class="text-[11px] uppercase font-black text-slate-400 tracking-widest mb-1">Address</p>
+                <p class="text-navy font-bold" id="view-address">—</p>
+            </div>
+        </div>
+
+        <!-- EDIT MODE -->
+        <form id="profile-form" class="hidden grid sm:grid-cols-2 gap-x-6 gap-y-4">
+            <label class="block">
+                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Full Name</span>
+                <input type="text" id="f-fullname" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium" placeholder="Juan Dela Cruz">
+            </label>
+            <label class="block">
+                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Email</span>
+                <input type="email" id="f-email" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium" placeholder="you@example.com">
+            </label>
+            <label class="block">
+                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Phone</span>
+                <input type="tel" id="f-phone" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium" placeholder="09xx xxx xxxx">
+            </label>
+            <label class="block">
+                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Username</span>
+                <input type="text" id="f-username" class="mt-1 w-full border-2 border-slate-100 bg-slate-50 px-4 py-3 rounded-xl font-medium text-slate-400" disabled>
+            </label>
+            <label class="block sm:col-span-2">
+                <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Address</span>
+                <textarea id="f-address" rows="2" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium resize-none" placeholder="Street, Barangay, City, Province"></textarea>
+            </label>
+            <div class="sm:col-span-2 flex gap-3 pt-2">
+                <button type="submit" id="save-profile-btn" class="flex-1 bg-orange text-white hover:brightness-110 transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                    <i data-lucide="check" class="w-5 h-5"></i> Save Changes
+                </button>
+                <button type="button" id="cancel-profile-btn" class="flex-1 border-2 border-slate-200 text-slate-600 hover:bg-slate-50 py-3 rounded-xl font-black">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- ORDER HISTORY CARD -->
+    <div class="bg-white rounded-[2.5rem] border-2 border-slate-100 p-6 sm:p-8 shadow-sm">
+        <h2 class="text-2xl font-black text-navy mb-6 border-b border-slate-100 pb-4 flex items-center gap-2">
+            <i data-lucide="package" class="w-6 h-6 text-orange"></i> Order History
+        </h2>
+        <div id="profile-history" class="space-y-1">
+            <p class="text-slate-300 animate-pulse font-bold text-sm">Loading…</p>
+        </div>
+    </div>
+
+</main>
+
+<!-- ── SETTINGS MODAL ───────────────────────────────────────────────────── -->
+<div id="settings-modal" class="hidden fixed inset-0 z-[100] items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+    <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div class="flex items-center justify-between px-6 sm:px-8 py-5 border-b border-slate-100">
+            <h2 class="text-2xl font-black text-navy flex items-center gap-2">
+                <i data-lucide="settings" class="w-6 h-6 text-orange"></i> Settings
+            </h2>
+            <button type="button" id="settings-close-btn" class="text-slate-400 hover:text-navy w-9 h-9 flex items-center justify-center rounded-lg hover:bg-slate-100" title="Close">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="space-y-3 p-6 sm:p-8 overflow-y-auto">
+
+            <!-- 1. Change Password -->
+            <div class="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="pw-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                            <i data-lucide="key" class="w-5 h-5 text-navy"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-navy">Change Password</span>
+                            <span class="block text-xs text-slate-400 font-medium">Update the password used to sign in</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 settings-chevron transition-transform"></i>
+                </button>
+                <div id="pw-panel" class="hidden border-t border-slate-100 p-5 bg-slate-50/40">
+                    <form id="password-form" class="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                        <label class="block sm:col-span-2">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Current Password</span>
+                            <input type="password" id="pw-current" autocomplete="current-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white">
+                        </label>
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">New Password</span>
+                            <input type="password" id="pw-new" autocomplete="new-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white" minlength="6">
+                        </label>
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Confirm Password</span>
+                            <input type="password" id="pw-confirm" autocomplete="new-password" class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white" minlength="6">
+                        </label>
+                        <div class="sm:col-span-2 flex gap-3 pt-2">
+                            <button type="submit" class="flex-1 bg-navy text-white hover:bg-orange transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                                <i data-lucide="shield-check" class="w-5 h-5"></i> Update Password
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 2. Default Delivery Address -->
+            <div class="border-2 border-slate-100 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="addr-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                            <i data-lucide="map-pin" class="w-5 h-5 text-navy"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-navy">Default Delivery Address</span>
+                            <span class="block text-xs text-slate-400 font-medium">Auto-filled when you place orders</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-slate-400 settings-chevron transition-transform"></i>
+                </button>
+                <div id="addr-panel" class="hidden border-t border-slate-100 p-5 bg-slate-50/40">
+                    <form id="addr-form" class="space-y-3">
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-slate-400 tracking-widest">Full Delivery Address</span>
+                            <textarea id="addr-value" rows="3" placeholder="Street, Barangay, City, Province"
+                                class="mt-1 w-full border-2 border-slate-200 focus:border-navy outline-none px-4 py-3 rounded-xl font-medium bg-white resize-none"></textarea>
+                        </label>
+                        <p class="text-xs text-slate-400 font-medium">This address will be pre-filled every time you go to checkout.</p>
+                        <button type="submit" class="w-full bg-navy text-white hover:bg-orange transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                            <i data-lucide="check" class="w-5 h-5"></i> Save Address
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 3. Sign Out -->
+            <button type="button" id="settings-signout"
+                    class="settings-row w-full flex items-center justify-between p-4 sm:p-5 border-2 border-slate-100 rounded-2xl hover:bg-slate-50 transition text-left">
+                <span class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-navy/5 flex items-center justify-center">
+                        <i data-lucide="log-out" class="w-5 h-5 text-navy"></i>
+                    </span>
+                    <span>
+                        <span class="block font-black text-navy">Sign Out</span>
+                        <span class="block text-xs text-slate-400 font-medium">End your session on this device</span>
+                    </span>
+                </span>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-slate-400"></i>
+            </button>
+
+            <!-- 5. Delete Account -->
+            <div class="border-2 border-red-100 bg-red-50/30 rounded-2xl overflow-hidden">
+                <button type="button" data-settings-toggle="delete-panel"
+                        class="settings-row w-full flex items-center justify-between p-4 sm:p-5 hover:bg-red-50 transition text-left">
+                    <span class="flex items-center gap-3">
+                        <span class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                            <i data-lucide="trash-2" class="w-5 h-5 text-red-600"></i>
+                        </span>
+                        <span>
+                            <span class="block font-black text-red-700">Delete Account</span>
+                            <span class="block text-xs text-red-400 font-medium">Permanently remove your account and orders</span>
+                        </span>
+                    </span>
+                    <i data-lucide="chevron-down" class="w-5 h-5 text-red-400 settings-chevron transition-transform"></i>
+                </button>
+                <div id="delete-panel" class="hidden border-t border-red-100 p-5">
+                    <p class="text-sm text-red-600 font-medium mb-4">
+                        This action cannot be undone. Your profile, cart, and order history will be deleted forever. Enter your password to confirm.
+                    </p>
+                    <form id="delete-form" class="space-y-3">
+                        <label class="block">
+                            <span class="text-[11px] uppercase font-black text-red-500 tracking-widest">Confirm Password</span>
+                            <input type="password" id="del-password" autocomplete="current-password" class="mt-1 w-full border-2 border-red-200 focus:border-red-500 outline-none px-4 py-3 rounded-xl font-medium bg-white">
+                        </label>
+                        <button type="submit" class="w-full bg-red-600 text-white hover:bg-red-700 transition py-3 rounded-xl font-black flex items-center justify-center gap-2">
+                            <i data-lucide="trash-2" class="w-5 h-5"></i> Permanently Delete My Account
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="assets/js/api.js"></script>
+<script src="assets/js/nav.js"></script>
+<script src="assets/js/page-profile.js"></script>
+</body>
+</html>

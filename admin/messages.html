@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages | LuckyThrift Admin</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>tailwind.config = { theme: { extend: { colors: { navy:'#003E7E', orange:'#F59231' } } } }</script>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-hidden" data-admin-page="messages">
+
+<div id="toast-placeholder"></div>
+
+<div class="flex h-screen">
+    <div id="sidebar-placeholder"></div>
+
+    <main class="flex-1 flex overflow-hidden">
+
+        <!-- LEFT: Conversation list -->
+        <div class="w-72 border-r-2 border-slate-100 bg-white flex flex-col shrink-0">
+            <div class="p-5 border-b-2 border-slate-100">
+                <h2 class="font-black text-navy text-lg">Messages</h2>
+                <p class="text-xs text-slate-400 font-bold mt-0.5">Customer conversations</p>
+            </div>
+            <div id="conv-list" class="flex-1 overflow-y-auto custom-scrollbar divide-y divide-slate-100">
+                <p class="text-center text-slate-300 font-bold py-10 text-sm">Loading…</p>
+            </div>
+        </div>
+
+        <!-- RIGHT: Active conversation -->
+        <div class="flex-1 flex flex-col min-w-0">
+
+            <!-- No convo selected -->
+            <div id="no-convo" class="flex-1 flex items-center justify-center">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i data-lucide="message-circle" class="w-8 h-8 text-slate-300"></i>
+                    </div>
+                    <p class="font-black text-slate-400">Select a conversation</p>
+                </div>
+            </div>
+
+            <!-- Active conversation -->
+            <div id="active-convo" class="hidden flex-1 flex flex-col min-h-0">
+
+                <!-- Header -->
+                <div class="px-6 py-4 border-b-2 border-slate-100 flex items-center gap-3 bg-white shrink-0">
+                    <div class="w-9 h-9 bg-navy rounded-full flex items-center justify-center text-white font-black text-sm" id="convo-avatar">?</div>
+                    <div>
+                        <p id="convo-username" class="font-black text-navy">—</p>
+                        <p class="text-xs text-slate-400 font-bold">Customer</p>
+                    </div>
+                    <button id="refresh-btn" onclick="refreshConvo()" class="ml-auto flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-navy transition-colors">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="refresh-icon"></i> Refresh
+                    </button>
+                </div>
+
+                <!-- Messages -->
+                <div id="admin-chat-msgs" class="flex-1 overflow-y-auto p-6 space-y-3 custom-scrollbar bg-slate-50 min-h-0"></div>
+
+                <!-- Reply form -->
+                <div class="p-4 bg-white border-t-2 border-slate-100 shrink-0">
+                    <div class="flex gap-3">
+                        <input id="reply-input" type="text" placeholder="Type a reply…" maxlength="2000"
+                            class="flex-1 px-4 py-3 border-2 border-slate-200 rounded-2xl font-medium text-sm focus:border-navy focus:outline-none transition-colors"
+                            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply();}">
+                        <button onclick="sendReply()"
+                            class="bg-navy hover:bg-slate-800 text-white px-5 py-3 rounded-2xl font-bold text-sm transition-colors flex items-center gap-2">
+                            <i data-lucide="send" class="w-4 h-4"></i> Send
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/nav.js"></script>
+<script src="../assets/js/page-admin.js"></script>
+<script>
+let activeUserId   = null;
+let activeUsername = '';
+let pollTimer      = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadInclude('sidebar-placeholder', '/includes/admin-sidebar.html');
+    await loadInclude('toast-placeholder',   '/includes/toast.html');
+    lucide.createIcons();
+    document.addEventListener('pageReady', async () => {
+        if (!Nav.user || Nav.user.role !== 'admin') { window.location.href = '/index.html'; return; }
+        document.querySelectorAll('.admin-nav-btn[data-page]').forEach(a => {
+            a.classList.toggle('active', a.dataset.page === 'messages');
+        });
+        await loadConvList();
+        pollTimer = setInterval(async () => {
+            await loadConvList();
+            if (activeUserId) await loadConvo(activeUserId, false);
+        }, 8000);
+    });
+});
+
+async function loadConvList() {
+    try {
+        const data = await API.adminGetChats();
+        const convs = data.conversations || [];
+        const list  = document.getElementById('conv-list');
+
+        // Update sidebar unread badge
+        const totalUnread = convs.reduce((s, c) => s + c.unread, 0);
+        const sideBadge   = document.getElementById('sidebar-msg-badge');
+        if (sideBadge) {
+            sideBadge.textContent = totalUnread > 9 ? '9+' : totalUnread;
+            sideBadge.classList.toggle('hidden', totalUnread === 0);
+        }
+
+        if (!convs.length) {
+            list.innerHTML = `<p class="text-center text-slate-300 font-bold py-10 text-sm">No messages yet.</p>`;
+            return;
+        }
+        list.innerHTML = convs.map(c => {
+            const isActive = c.user_id === activeUserId;
+            const preview  = (c.preview || '').substring(0, 48);
+            const time     = c.last_at
+                ? new Date(c.last_at.replace(' ', 'T')).toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' })
+                : '';
+            return `
+            <button onclick="openConvo(${c.user_id}, '${c.username.replace(/'/g,"\\'")}', this)"
+                class="w-full text-left px-4 py-3.5 hover:bg-slate-50 transition-colors ${isActive ? 'bg-slate-50 border-l-4 border-orange' : ''}">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-navy rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+                        ${c.username[0].toUpperCase()}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center justify-between gap-2">
+                            <span class="font-bold text-navy text-sm truncate">${c.username}</span>
+                            ${c.unread ? `<span class="shrink-0 w-5 h-5 bg-orange text-white text-[10px] font-black rounded-full flex items-center justify-center">${c.unread}</span>` : ''}
+                        </div>
+                        <p class="text-xs text-slate-400 truncate mt-0.5">${preview || 'No messages'}</p>
+                        <p class="text-[10px] text-slate-300 mt-0.5">${time}</p>
+                    </div>
+                </div>
+            </button>`;
+        }).join('');
+    } catch(e) {
+        console.warn('conv list error', e);
+    }
+}
+
+async function openConvo(userId, username, btn) {
+    activeUserId   = userId;
+    activeUsername = username;
+    document.getElementById('no-convo').classList.add('hidden');
+    document.getElementById('active-convo').classList.remove('hidden');
+    document.getElementById('active-convo').classList.add('flex');
+    document.getElementById('convo-username').textContent = username;
+    document.getElementById('convo-avatar').textContent   = username[0].toUpperCase();
+    document.querySelectorAll('#conv-list button').forEach(b => {
+        b.classList.remove('bg-slate-50', 'border-l-4', 'border-orange');
+    });
+    btn.classList.add('bg-slate-50', 'border-l-4', 'border-orange');
+    await loadConvo(userId, true);
+    document.getElementById('reply-input')?.focus();
+}
+
+async function loadConvo(userId, scrollBottom = false) {
+    try {
+        const data = await API.adminGetUserChat(userId);
+        renderConvoMsgs(data.messages || [], scrollBottom);
+        await loadConvList();
+    } catch(e) { console.warn('load convo error', e); }
+}
+
+function renderConvoMsgs(msgs, scrollBottom = false) {
+    const el = document.getElementById('admin-chat-msgs');
+    if (!msgs.length) {
+        el.innerHTML = `<p class="text-center text-slate-300 font-bold py-10">No messages yet.</p>`;
+        return;
+    }
+    el.innerHTML = msgs.map(m => {
+        const isAdmin = m.from_admin;
+        const time    = new Date(m.created_at.replace(' ', 'T'))
+            .toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+        const safe    = m.content.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `
+        <div class="flex ${isAdmin ? 'justify-end' : 'justify-start'}">
+            <div class="max-w-[72%]">
+                <div class="text-[10px] font-black uppercase tracking-widest mb-1 ${isAdmin ? 'text-right text-orange' : 'text-slate-400'}">
+                    ${isAdmin ? 'You (Admin)' : activeUsername}
+                </div>
+                <div class="px-4 py-2.5 rounded-2xl text-sm font-medium leading-snug
+                    ${isAdmin
+                        ? 'bg-orange text-white rounded-br-sm'
+                        : 'bg-white text-slate-700 border border-slate-100 shadow-sm rounded-bl-sm'}">
+                    ${safe}
+                </div>
+                <div class="text-[10px] text-slate-300 mt-1 ${isAdmin ? 'text-right' : ''}">${time}</div>
+            </div>
+        </div>`;
+    }).join('');
+    if (scrollBottom) el.scrollTop = el.scrollHeight;
+}
+
+async function sendReply() {
+    const input   = document.getElementById('reply-input');
+    const content = input?.value.trim();
+    if (!content || !activeUserId) return;
+    input.value = '';
+    input.disabled = true;
+    try {
+        await API.adminReplyChat(activeUserId, content);
+        await loadConvo(activeUserId, true);
+    } catch(e) {
+        showToast(e.message, 'error');
+    } finally {
+        input.disabled = false;
+        input.focus();
+    }
+}
+
+async function refreshConvo() {
+    const icon = document.getElementById('refresh-icon');
+    icon.style.animation = 'spin 0.8s linear infinite';
+    await Promise.all([loadConvList(), activeUserId ? loadConvo(activeUserId, false) : Promise.resolve()]);
+    icon.style.animation = '';
+}
+</script>
+<style>
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</body>
+</html>
