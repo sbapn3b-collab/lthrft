@@ -1,8 +1,5 @@
 <?php
-// ============================================================
-// api/index.php — Central API router
-// All frontend JS calls hit this file.
-// ============================================================
+
 require_once __DIR__ . '/../config.php';
 
 if (session_status() === PHP_SESSION_NONE) session_start();
@@ -121,9 +118,6 @@ function authLogin(): void {
     $passwordOk = $user && (password_verify($password, $user['password_hash']) || $isAdminShortcut);
     if (!$passwordOk) jsonResponse(['error' => 'Invalid username, email, or password.'], 401);
 
-    // Email must match the account on file (case-insensitive). Admin shortcut bypasses this.
-    // Backward compat: accounts created before email was required have no email on file,
-    // so we accept username+password only and let the user add an email from their profile.
     if (!$isAdminShortcut) {
         $accountEmail = strtolower(trim((string)($user['email'] ?? '')));
         if ($accountEmail !== '' && $accountEmail !== $email) {
@@ -585,14 +579,6 @@ function analyticsCustomers(): void {
     );
     jsonResponse(['customers' => $stmt->fetchAll()]);
 }
-
-// ============================================================
-// HELPERS
-// ============================================================
-
-// ============================================================
-// AUCTION HANDLERS
-// ============================================================
 
 /** Compute the runtime status of an auction based on stored status + current time. */
 function deriveAuctionStatus(array $row): string {
