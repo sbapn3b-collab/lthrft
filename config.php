@@ -1,7 +1,4 @@
 <?php
-// ============================================================
-// config.php — Database connection settings (PostgreSQL)
-// ============================================================
 
 define('DB_HOST',    getenv('PGHOST')     ?: 'localhost');
 define('DB_PORT',    getenv('PGPORT')     ?: '5432');
