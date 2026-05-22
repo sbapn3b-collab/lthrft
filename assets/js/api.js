@@ -71,9 +71,10 @@ const API = {
         }),
     directOrder:  (product_id, barangay, address, payment, ewalletNum = '') =>
         apiFetch('orders/direct', 'POST', { product_id, barangay, address, payment, ewallet_num: ewalletNum }),
-    cancelOrder:  (orderId) => apiFetch(`orders/${orderId}/cancel`,  'PUT'),
-    shipOrder:    (orderId) => apiFetch(`orders/${orderId}/ship`,    'PUT'),
-    deliverOrder: (orderId) => apiFetch(`orders/${orderId}/deliver`, 'PUT'),
+    cancelOrder:       (orderId) => apiFetch(`orders/${orderId}/cancel`,  'PUT'),
+    shipOrder:         (orderId) => apiFetch(`orders/${orderId}/ship`,    'PUT'),
+    deliverOrder:      (orderId) => apiFetch(`orders/${orderId}/deliver`, 'PUT'),
+    updateOrderStatus: (orderId, status) => apiFetch(`orders/${orderId}/status`, 'PUT', { status }),
 
     // ── ADMIN ─────────────────────────────────────────────────────────────────
     adminGetOrders: () => apiFetch('admin/orders'),
