@@ -1,0 +1,269 @@
+Here's your complete presentation script. Aim for 15–20 minutes — clear and focused is better than long.
+
+LuckyThrift | OrderWise — Presentation Script
+Before you start recording:
+
+Open your app in the browser at the home page
+Have a second browser tab open in your code editor (Replit) so you can quickly switch to show code
+Log out of any session so you start fresh
+Use a screen recorder (OBS, Loom, or Windows Game Bar Win+G)
+PART 1 — Introduction (1–2 min)
+Say:
+
+"This is LuckyThrift OrderWise — a full-stack e-commerce web application for vintage and thrift clothing. It's built using PHP 8.2 as the backend, PostgreSQL as the database, and plain HTML, CSS, and JavaScript on the frontend. All communication between the frontend and the database goes through a central PHP API file. Let me walk you through the main features and show you exactly how each one connects to the database."
+
+Show: The home page — scroll slowly so the products and layout are visible.
+
+PART 2 — Database Schema (1 min)
+Say:
+
+"The system uses eight database tables: users, products, cart, orders, order_items, auctions, bids, and chat_messages. Each table is designed for a specific part of the system. Let me now show you each feature and the database code behind it."
+
+Show: Switch to your code editor and open config.php or just say the table names while showing the home page.
+
+PART 3 — User Registration & Login (2–3 min)
+Do: Click "Sign In" → switch to "Sign Up" tab → register a new account (username: testuser, password: test123).
+
+Say:
+
+"When a user registers, the frontend sends the username, email, and password to the API. Let me show you the PHP code that handles this."
+
+Show code — open api/index.php, scroll to authRegister():
+
+$stmt = $db->prepare('SELECT id FROM users WHERE username = ?');
+$stmt->execute([$username]);
+// ...
+$ins = $db->prepare(
+  "INSERT INTO users (username, password_hash, role, email)
+   VALUES (?, ?, 'customer', ?) RETURNING id"
+);
+$ins->execute([$username, password_hash($password, PASSWORD_DEFAULT), $email]);
+
+Say:
+
+"The password is never stored as plain text — PHP's password_hash() function hashes it before the INSERT. The new user gets the role 'customer' automatically. Now let me log in."
+
+Do: Log out, log back in as testuser.
+
+Show code — authLogin() function:
+
+$stmt = $db->prepare('SELECT * FROM users WHERE username = ?');
+$stmt->execute([$username]);
+$user = $stmt->fetch();
+// ...
+if (!password_verify($password, $user['password_hash'])) { ... }
+$_SESSION['user_id'] = $user['id'];
+
+Say:
+
+"Login does a SELECT to find the user, verifies the password hash, and if it matches, stores the user's ID in a PHP session. That session is what keeps the user logged in as they navigate the site."
+
+PART 4 — Browsing Products & the Storefront (1–2 min)
+Do: Navigate to the Storefront page. Scroll through products.
+
+Say:
+
+"The storefront displays all available products. When this page loads, the JavaScript calls the products endpoint, and PHP queries the database."
+
+Show code — getProducts() in api/index.php:
+
+$rows = $db->query(
+  'SELECT * FROM products ORDER BY id ASC'
+)->fetchAll();
+
+Say:
+
+"A simple SELECT query returns all products ordered by ID. The result is sent back as JSON, and the frontend renders each product as a card. Now let's add something to the cart."
+
+PART 5 — Cart & Checkout (3–4 min)
+Do: Click "Add to Cart" on a product.
+
+Say:
+
+"Adding to cart calls the POST /cart endpoint. Here's that code."
+
+Show code — addToCart():
+
+$stmt = $db->prepare('SELECT stock FROM products WHERE id = ?');
+$stmt->execute([$productId]);
+// If stock > 0 and not already in cart...
+$stmt = $db->prepare(
+  'INSERT INTO cart (user_id, product_id) VALUES (?, ?) RETURNING id'
+);
+$stmt->execute([$user['id'], $productId]);
+
+Say:
+
+"Before inserting, the API checks that stock is greater than zero. The cart table just stores the user ID and product ID — no quantity, since each item is unique vintage clothing."
+
+Do: Click the cart icon, then click Checkout. Fill in a delivery address and select Cash on Delivery. Place the order.
+
+Say:
+
+"Placing an order is the most important database operation in the system. Let me show you what happens."
+
+Show code — placeOrder():
+
+// Step 1: Reduce stock for each item
+$upd = $db->prepare(
+  'UPDATE products SET stock = stock - 1 WHERE id = ? AND stock > 0'
+);
+// Step 2: Create the order record
+$db->prepare(
+  'INSERT INTO orders (user_id, total_amount, delivery_addr, payment_method, ewallet_num)
+   VALUES (?,?,?,?,?) RETURNING id'
+)->execute([...]);
+// Step 3: Insert each item into order_items
+$ins = $db->prepare(
+  'INSERT INTO order_items (order_id, product_id, name, price) VALUES (?,?,?,?)'
+);
+// Step 4: Clear the cart
+$db->prepare("DELETE FROM cart WHERE id IN ($ph)")->execute($confirmedCartIds);
+
+Say:
+
+"Four things happen in sequence: stock is decremented, the order is created in the orders table, each product is recorded in order_items, and then the cart is cleared. This ensures the database stays consistent — if any step fails, nothing gets committed."
+
+PART 6 — Auctions & Bidding (2–3 min)
+Do: Navigate to the Bids page. Show the auction listings.
+
+Say:
+
+"LuckyThrift also supports live auctions. Customers can browse active auctions and place bids."
+
+Do: Click into one auction. Show the current bid and place a bid.
+
+Show code — bid placement in api/index.php (placeBid function):
+
+$stmt = $db->prepare('SELECT * FROM auctions WHERE id = ? AND status = ?');
+$stmt->execute([$auctionId, 'active']);
+// Validate bid is higher than current price
+if ($amount <= $auction['current_price']) { ... error ... }
+$db->prepare(
+  'INSERT INTO bids (auction_id, user_id, amount) VALUES (?,?,?)'
+)->execute([$auctionId, $user['id'], $amount]);
+$db->prepare(
+  'UPDATE auctions SET current_price=?, updated_at=CURRENT_TIMESTAMP WHERE id=?'
+)->execute([$amount, $auctionId]);
+
+Say:
+
+"When a bid is placed, the system validates it's higher than the current price, inserts a record into the bids table, and then updates the auction's current price. This keeps the bids table as a full history while the auctions table always reflects the latest price."
+
+PART 7 — Admin Dashboard (2–3 min)
+Do: Log out, then log in as admin (username: admin, password: admin123). You'll land on the admin dashboard.
+
+Say:
+
+"The admin dashboard shows key statistics pulled live from the database."
+
+Show code — getDashboard():
+
+$revenue = $db->query(
+  "SELECT COALESCE(SUM(total_amount),0) AS rev
+   FROM orders WHERE status != 'Cancelled'"
+)->fetch()['rev'];
+$pending = $db->query(
+  "SELECT COUNT(*) AS c FROM orders WHERE status = 'Pending'"
+)->fetch()['c'];
+$products = $db->query(
+  "SELECT COUNT(*) AS c FROM products"
+)->fetch()['c'];
+// Top selling products
+$db->query(
+  "SELECT oi.name, COUNT(*) AS sold
+   FROM order_items oi
+   JOIN orders o ON oi.order_id = o.id
+   WHERE o.status != 'Cancelled'
+   GROUP BY oi.name ORDER BY sold DESC LIMIT 5"
+);
+
+Say:
+
+"Each stat is its own query — revenue is a SUM of all non-cancelled orders, pending is a COUNT filtered by status, and top products uses a JOIN between order_items and orders grouped by product name."
+
+PART 8 — Admin: Inventory Management (2 min)
+Do: Click Inventory in the sidebar. Show the product list. Click Edit on a product, change the price, save it.
+
+Say:
+
+"Admins can create, edit, and delete products. Here's the update code."
+
+Show code — adminUpdateProduct():
+
+$db->prepare(
+  'UPDATE products SET name=?, price=?, description=?, images=?, category=?
+   WHERE id=?'
+)->execute([$name, $price, $description, $images, $category, $id]);
+
+Do: Show the delete button. Don't click it, just point to it.
+
+Say:
+
+"Deleting a product also removes it from any active carts and nullifies its foreign key in order_items so order history is preserved."
+
+Show code — adminDeleteProduct():
+
+$db->prepare('UPDATE order_items SET product_id = NULL WHERE product_id = ?')
+   ->execute([$id]);
+$db->prepare('DELETE FROM cart WHERE product_id = ?')->execute([$id]);
+$db->prepare('DELETE FROM products WHERE id = ?')->execute([$id]);
+
+PART 9 — Admin: Orders Management (1–2 min)
+Do: Click Orders in the sidebar. Show the orders list.
+
+Say:
+
+"Admins can view all customer orders and update their status through the fulfillment pipeline."
+
+Show code — adminGetOrders() query:
+
+"SELECT o.*, u.username AS customer,
+        json_agg(json_build_object('name',oi.name,'price',oi.price)) AS items
+ FROM orders o
+ JOIN users u ON o.user_id = u.id
+ LEFT JOIN order_items oi ON oi.order_id = o.id
+ GROUP BY o.id, u.username
+ ORDER BY o.created_at DESC"
+
+Say:
+
+"This query joins orders with users and uses json_agg to aggregate each order's items into a JSON array — so the frontend gets everything it needs in a single query instead of multiple round trips."
+
+Show code — status update:
+
+// Ship an order:
+"UPDATE orders SET status = 'Shipped' WHERE id = ?"
+// Mark delivered:
+"UPDATE orders SET status = 'Delivered' WHERE id = ? AND status = 'Shipped'"
+
+PART 10 — Customer Chat (1 min)
+Do: Log out, log back in as testuser. Show the chat widget in the bottom corner. Send a message.
+
+Say:
+
+"Customers can message the admin directly through the chat widget."
+
+Show code — customerSendMessage():
+
+getDB()->prepare(
+  "INSERT INTO chat_messages (user_id, content, from_admin) VALUES (?, ?, FALSE)"
+)->execute([$user['id'], $content]);
+
+Say:
+
+"Each message is stored with the user ID, the content, and a from_admin boolean flag. When the admin replies, the same table is used with from_admin = TRUE. The frontend polls this table to show new messages in real time."
+
+PART 11 — Closing (30 sec)
+Say:
+
+"To summarize — LuckyThrift OrderWise covers the full e-commerce lifecycle: user registration and authentication, product browsing, cart management, order placement with stock control, live auctions with bidding, an admin dashboard with live database statistics, inventory and order management, and customer support chat. All of it is backed by PostgreSQL with PHP handling every database interaction through prepared statements to prevent SQL injection. Thank you."
+
+Tips for Recording
+What	How
+Show code clearly	Zoom your browser to 125% before recording
+Speak slowly	Pause 1 second after switching screens
+Stay under 20 min	Keep each section tight — you don't need to type everything live
+Admin login shortcut	Username admin, password admin123
+Test user	Register a fresh account at the start so the demo looks natural
+Next, I can add an order status management panel to the admin orders page so you can update statuses directly from the table without needing a separate flow. Would you like me to do that?
